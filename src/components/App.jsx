@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { ToastContainer } from 'react-toastify';
 import Searchbar from './Searchbar';
 import ImageGallery from './ImageGallery';
@@ -8,89 +8,74 @@ import Modal from './Modal';
 import { getImages } from '../services/apiService';
 import ErrorMessage from './ErrorMessage';
 
-export default class App extends Component {
-  state = {
-    query: '',
-    page: 1,
-    images: [],
-    loading: false,
-    error: null,
-    selectedImage: null,
-    showModal: false,
-    loadMore: false,
+const App = () => {
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [loadMore, setLoadMore] = useState(false);
+
+  const handleFormSubmit = query => {
+    setQuery(query);
+    setPage(1);
+    setImages([]);
+    setLoading(true);
+    setError(null);
+    setLoadMore(false);
   };
 
-  handleFormSubmit = query => {
-    this.setState({
-      query,
-      page: 1,
-      images: [],
-      loading: true,
-      error: null,
-      loadMore: false,
-    });
+  const onLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  onLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+  const onOpenModal = image => {
+    setSelectedImage(image);
+    setShowModal(true);
   };
 
-  onOpenModal = image => {
-    this.setState({
-      selectedImage: image,
-      showModal: true,
-    });
+  const onCloseModal = () => {
+    setShowModal(false);
   };
 
-  onCloseModal = () => {
-    this.setState({ showModal: false });
-  };
-
-  componentDidUpdate(prevProps, prevState) {
-    if (
-      this.state.page !== prevState.page ||
-      this.state.query !== prevState.query
-    ) {
-      getImages(this.state.query, this.state.page)
-        .then(images => {
-          this.setState(prevState => ({
-            images: [...prevState.images, ...images.hits],
-            loading: false,
-            loadMore: this.state.page < Math.ceil(images.totalHits / 12),
-          }));
-        })
-        .catch(error => {
-          this.setState({
-            error,
-            loading: false,
-          });
-        });
+  useEffect(() => {
+    if (!query) {
+      return;
     }
-  }
 
-  render() {
-    const { selectedImage, error, images, loadMore, showModal, loading } =
-      this.state;
-    return (
-      <>
-        <Searchbar onSubmit={this.handleFormSubmit}></Searchbar>
-        {showModal && (
-          <Modal
-            link={selectedImage.largeImageURL}
-            tags={selectedImage.tags}
-            closeModal={this.onCloseModal}
-          />
-        )}
-        {loading && <Loader />}
-        {error && <ErrorMessage error={error} />}
+    getImages(query, page)
+      .then(fetchedImages => {
+        setImages(prevImages => [...prevImages, ...fetchedImages.hits]);
+        setLoading(false);
+        setLoadMore(page < Math.ceil(fetchedImages.totalHits / 12));
+      })
+      .catch(error => {
+        setError(error);
+        setLoading(false);
+      });
+  }, [query, page]);
 
-        <ImageGallery images={images} onImgClick={this.onOpenModal} />
-        {loadMore && <Button onLoadMore={this.onLoadMore} />}
+  return (
+    <>
+      <Searchbar onSubmit={handleFormSubmit}></Searchbar>
+      {showModal && (
+        <Modal
+          link={selectedImage.largeImageURL}
+          tags={selectedImage.tags}
+          closeModal={onCloseModal}
+        />
+      )}
+      {loading && <Loader />}
+      {error && <ErrorMessage error={error} />}
 
-        <ToastContainer />
-      </>
-    );
-  }
-}
+      <ImageGallery images={images} onImgClick={onOpenModal} />
+      {loadMore && <Button onLoadMore={onLoadMore} />}
+
+      <ToastContainer />
+    </>
+  );
+};
+
+export default App;
