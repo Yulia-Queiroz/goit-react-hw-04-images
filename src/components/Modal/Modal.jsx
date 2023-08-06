@@ -12,19 +12,18 @@ const Modal = ({ link, tags, closeModal }) => {
     }
   };
 
-  const onEsc = evt => {
-    if (evt.code === 'Escape') {
-      closeModal();
-    }
-  };
-
   useEffect(() => {
+    const onEsc = evt => {
+      if (evt.code === 'Escape') {
+        closeModal();
+      }
+    };
     window.addEventListener('keydown', onEsc);
 
     return () => {
       window.removeEventListener('keydown', onEsc);
     };
-  }, []);
+  }, [closeModal]);
 
   return createPortal(
     <div className={styles.overlay} onClick={onBackdropClick}>
